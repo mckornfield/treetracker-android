@@ -10,12 +10,15 @@ import android.os.AsyncTask;
 import android.os.Environment;
 import android.util.Log;
 
-import org.greenstand.android.TreeTracker.utilities.Utils;
+import com.amazonaws.AmazonClientException;
+
 import org.greenstand.android.TreeTracker.activities.MainActivity;
 import org.greenstand.android.TreeTracker.api.models.NewTree;
 import org.greenstand.android.TreeTracker.api.models.PostResult;
 import org.greenstand.android.TreeTracker.database.DatabaseManager;
 import com.amazonaws.AmazonClientException;
+import org.greenstand.android.TreeTracker.utilities.Utils;
+
 import java.io.File;
 
 import timber.log.Timber;
@@ -100,33 +103,25 @@ public class SyncTask extends AsyncTask<Void, Void, String> {
             String imagePath = treeCursor.getString(treeCursor.getColumnIndex("name"));
             String imageUrl;
             try {
-                imageUrl = DOSpaces.instance().put(imagePath, userId);
+                imageUrl = DigitalOceanSpaces.instance().put(imagePath, userId);
             } catch (AmazonClientException ace) {
-                Log.e("SyncTask", "Caught an AmazonClientException, which " +
+                Timber.tag("SyncTask").e("Caught an AmazonClientException, which " +
                         "means the client encountered " +
                         "an internal error while trying to " +
                         "communicate with S3, " +
                         "such as not being able to access the network.");
-                Log.e("SyncTask", "Error Message: " + ace.getMessage());
+                Timber.tag("SyncTask").e("Error Message: " + ace.getMessage());
                 return "Failed.";
             }
-            Log.d("SyncTask", "imageUrl: " + imageUrl);
-            //newTree.setBase64Image(imageUrl); // method name should be changed as use new infrastructure.
+            Timber.tag("SyncTask").e("imageUrl: " + imageUrl);
+            newTree.setBase64Image(imageUrl);
 
             /**
-             * Current version of saving image in base 64 format to server, will be deprecated
-             * after use DigitalOcean cloud storage.
+             * Deprecated.
+             *
+                String image = Utils.base64Image(treeCursor.getString(treeCursor.getColumnIndex("name")));
+                newTree.setBase64Image(image);
              */
-            String image = Utils.base64Image(treeCursor.getString(treeCursor.getColumnIndex("name")));
-            newTree.setBase64Image(image);
-
-//            Timber.tag("DataFragment").d("user_id: " + newTree.getUserId());
-//            Timber.tag("DataFragment").d("lat: " + newTree.getLat());
-//            Timber.tag("DataFragment").d("lon: " + newTree.getLon());
-//            Timber.tag("DataFragment").d("note: " + newTree.getNote());
-//            Timber.tag("DataFragment").d("gps: " + newTree.getGpsAccuracy());
-//            Timber.tag("DataFragment").d("timestamp: " + newTree.getTimestamp());
-//            Timber.tag("DataFragment").d("image: " + newTree.getBase64Image());
 
             PostResult response = (PostResult) mDataManager.createNewTree(newTree);
             if (response != null) {
